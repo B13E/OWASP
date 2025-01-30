@@ -1,0 +1,167 @@
+body {
+    font-family: Arial, sans-serif;
+    text-align: center;
+    background-color: #f4f4f4;
+    margin: 0;
+    padding: 0;
+}
+
+.container {
+    background: white;
+    max-width: 400px;
+    margin: 50px auto;
+    padding: 20px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+}
+
+h1 {
+    color: #333;
+}
+
+/* 🚀 Eingabe-Felder mit Abstand zum Rand */
+.input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 10px; /* Fügt Abstand um die Eingabefelder hinzu */
+}
+
+input {
+    width: calc(100% - 10px); /* Mindestens 0,5 cm Abstand (ca. 5px) zum Rand */
+    padding: 10px;
+    border: 2px solid #ccc;
+    border-radius: 5px;
+    font-size: 16px;
+    margin: 5px; /* Abstand zwischen den Feldern */
+}
+
+/* 🚀 Buttons sauber nebeneinander anordnen */
+.button-group {
+    display: flex;
+    justify-content: center;
+    gap: 15px; /* Abstand zwischen den Buttons */
+    margin-top: 20px;
+}
+
+/* Standard-Button-Styling */
+button {
+    padding: 10px 15px;
+    border: none;
+    background-color: #007BFF;
+    color: white;
+    font-size: 16px;
+    cursor: pointer;
+    border-radius: 5px;
+}
+
+button:hover {
+    background-color: #0056b3;
+}
+
+/* 🚀 Benutzerkarten-Styling */
+.user-card {
+    background: #ffffff;
+    padding: 10px;
+    margin: 10px auto;
+    border-radius: 5px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    max-width: 400px;
+    text-align: left;
+    font-size: 16px;
+    border-left: 4px solid #007BFF;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* 🚀 Buttons für "Bearbeiten" & "Löschen" nebeneinander */
+.button-group-user {
+    display: flex;
+    gap: 10px;
+}
+
+/* Spezielle Styles für die Buttons in der Benutzerkarte */
+.edit-btn {
+    padding: 5px 10px;
+    background-color: #28a745;
+    color: white;
+    border: none;
+    cursor: pointer;
+    border-radius: 5px;
+    font-size: 14px;
+}
+
+.edit-btn:hover {
+    background-color: #218838;
+}
+
+.delete-btn {
+    padding: 5px 10px;
+    background-color: #ff4d4d;
+    color: white;
+    border: none;
+    cursor: pointer;
+    border-radius: 5px;
+    font-size: 14px;
+}
+
+.delete-btn:hover {
+    background-color: #cc0000;
+}
+
+/* 🚀 Logout-Button mit Abstand */
+.logout-btn {
+    margin-top: 30px;
+    padding: 12px 20px;
+    background-color: #ff4d4d;
+    color: white;
+    font-size: 16px;
+    cursor: pointer;
+    border-radius: 5px;
+    border: none;
+}
+
+.logout-btn:hover {
+    background-color: #cc0000;
+}
+
+/* 🚀 Bearbeiten-Popup (unsichtbar, bis es angezeigt wird) */
+.popup {
+    display: none;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: white;
+    padding: 20px;
+    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.3);
+    border-radius: 8px;
+    z-index: 1000;
+}
+
+.popup-content {
+    text-align: center;
+}
+
+.popup input {
+    display: block;
+    margin: 10px auto;
+    padding: 10px;
+    width: 80%;
+}
+
+/* 🚀 Stellt sicher, dass alles sauber auf kleineren Bildschirmen funktioniert */
+@media (max-width: 600px) {
+    .button-group {
+        flex-direction: column;
+    }
+
+    .button-group-user {
+        flex-direction: column;
+    }
+
+    input {
+        width: calc(100% - 20px); /* Mehr Abstand auf kleineren Geräten */
+    }
+}

@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Willkommen im Dashboard!</h1>
+        <p>Hier sind alle gespeicherten Benutzer:</p>
+
+        <div id="user-list"></div> 
+
+        <button class="logout-btn" onclick="logout()">Logout</button>
+    </div>
+
+    <!-- Bearbeiten-Popup (Versteckt, bis ein Benutzer bearbeitet wird) -->
+    <div id="edit-popup" class="popup">
+        <div class="popup-content">
+            <h2>Benutzer bearbeiten</h2>
+            <input type="email" id="edit-email" disabled>
+            <input type="password" id="edit-password" placeholder="Neues Passwort">
+            <button onclick="updateUser()">Speichern</button>
+            <button onclick="closePopup()">Abbrechen</button>
+        </div>
+    </div>
+
+    <script>
+        let currentUserEmail = "";
+
+        async function loadUsers() {
+            try {
+                const response = await fetch('/users');
+                if (!response.ok) throw new Error("Fehler beim Abrufen der Benutzerdaten.");
+
+                const users = await response.json();
+                const userList = document.getElementById("user-list");
+                userList.innerHTML = "";
+
+                users.forEach((user, index) => {
+                    const userCard = document.createElement("div");
+                    userCard.classList.add("user-card");
+                    userCard.innerHTML = `
+                        <p><strong>#${index + 1}</strong> ${user.email}</p>
+                        <div class="button-group">
+                            <button class="edit-btn" onclick="openPopup('${user.email}')">Bearbeiten</button>
+                            <button class="delete-btn" onclick="deleteUser('${user.email}')">Löschen</button>
+                        </div>
+                    `;
+                    userList.appendChild(userCard);
+                });
+            } catch (error) {
+                console.error("[Client] Fehler beim Laden der Benutzerdaten:", error);
+            }
+        }
+
+        function openPopup(email) {
+            currentUserEmail = email;
+            document.getElementById("edit-email").value = email;
+            document.getElementById("edit-popup").style.display = "block";
+        }
+
+        function closePopup() {
+            document.getElementById("edit-popup").style.display = "none";
+        }
+
+        async function updateUser() {
+            const newPassword = document.getElementById("edit-password").value;
+
+            if (!newPassword) {
+                alert("Bitte ein neues Passwort eingeben.");
+                return;
+            }
+
+            try {
+                const response = await fetch(`/update-user/${currentUserEmail}`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ password: newPassword })
+                });
+
+                if (response.ok) {
+                    alert("Benutzer erfolgreich aktualisiert.");
+                    closePopup();
+                    loadUsers();
+                } else {
+                    alert("Fehler beim Aktualisieren.");
+                }
+            } catch (error) {
+                console.error("[Client] Fehler beim Aktualisieren:", error);
+            }
+        }
+
+        async function deleteUser(email) {
+            if (!confirm(`Möchtest du den Benutzer ${email} wirklich löschen?`)) return;
+
+            try {
+                const response = await fetch(`/delete-user/${email}`, { method: "DELETE" });
+
+                if (response.ok) {
+                    alert("Benutzer erfolgreich gelöscht.");
+                    loadUsers();  // Seite automatisch aktualisieren
+                } else {
+                    alert("Fehler beim Löschen.");
+                }
+            } catch (error) {
+                console.error("[Client] Fehler beim Löschen:", error);
+            }
+        }
+
+        function logout() {
+            console.log("[Client] Benutzer hat sich ausgeloggt.");
+            window.location.href = "/";
+        }
+
+        if (window.location.pathname === "/dashboard.html") {
+            loadUsers();
+        }
+    </script>
+</body>
+</html>

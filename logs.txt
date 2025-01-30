@@ -1,0 +1,18 @@
+[Date: 2025-01-30 Time: 16:04:12] 📌 Express-Server wird gestartet...
+[Date: 2025-01-30 Time: 16:04:12] 🚀 Server läuft auf http://localhost:3000
+[Date: 2025-01-30 Time: 16:04:12] ✅ MongoDB verbunden
+[Date: 2025-01-30 Time: 16:05:44] [POST] /add-user - Request empfangen: {"email":"admin@admin.com","password":"Admin123!"}
+[Date: 2025-01-30 Time: 16:05:44] [POST] /add-user - Neuer Benutzer wird gespeichert...
+[Date: 2025-01-30 Time: 16:05:44] [POST] /add-user - Benutzer erfolgreich gespeichert!
+[Date: 2025-01-30 Time: 16:06:04] [POST] /login - Login-Anfrage erhalten: {"email":"admin@admin.com","password":"Admin123!"}
+[Date: 2025-01-30 Time: 16:06:04] [POST] /login - Erfolgreich angemeldet!
+[Date: 2025-01-30 Time: 16:06:04] [GET] /users - Abruf der Benutzerdaten...
+[Date: 2025-01-30 Time: 16:06:04] [GET] /users - Anzahl Benutzer: 2
+[Date: 2025-01-30 Time: 16:06:07] [DELETE] /delete-user - Lösche Benutzer: sd@asd.com
+[Date: 2025-01-30 Time: 16:06:07] [DELETE] /delete-user - Benutzer erfolgreich gelöscht (sd@asd.com)
+[Date: 2025-01-30 Time: 16:06:08] [GET] /users - Abruf der Benutzerdaten...
+[Date: 2025-01-30 Time: 16:06:08] [GET] /users - Anzahl Benutzer: 1
+[Date: 2025-01-30 Time: 16:06:38] [PUT] /update-user - Benutzer aktualisieren: admin@admin.com
+[Date: 2025-01-30 Time: 16:06:38] [PUT] /update-user - Benutzer erfolgreich aktualisiert (admin@admin.com)
+[Date: 2025-01-30 Time: 16:06:39] [GET] /users - Abruf der Benutzerdaten...
+[Date: 2025-01-30 Time: 16:06:39] [GET] /users - Anzahl Benutzer: 1
