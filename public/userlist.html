@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Benutzerliste</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Alle registrierten Benutzer</h1>
+        <div id="user-list"></div>
+        <button class="logout-btn" onclick="logout()">Logout</button>
+    </div>
+
+    <script>
+        async function loadUsers() {
+            try {
+                const response = await fetch('/users');
+                if (!response.ok) throw new Error("Fehler beim Abrufen der Benutzerdaten.");
+                
+                const users = await response.json();
+                const userList = document.getElementById("user-list");
+                userList.innerHTML = "";
+
+                users.forEach((user, index) => {
+                    const userCard = document.createElement("div");
+                    userCard.classList.add("user-card");
+                    userCard.innerHTML = `<p><strong>#${index + 1}</strong> ${user.email}</p>`;
+                    userList.appendChild(userCard);
+                });
+            } catch (error) {
+                console.error("[Client] Fehler beim Laden der Benutzerdaten:", error);
+            }
+        }
+
+        function logout() {
+            console.log("[Client] Benutzer hat sich ausgeloggt.");
+            window.location.href = "/";
+        }
+
+        loadUsers();
+    </script>
+</body>
+</html>

@@ -16,7 +16,7 @@
         <button class="logout-btn" onclick="logout()">Logout</button>
     </div>
 
-    <!-- Bearbeiten-Popup (Versteckt, bis ein Benutzer bearbeitet wird) -->
+    <!-- Bearbeiten-Popup -->
     <div id="edit-popup" class="popup">
         <div class="popup-content">
             <h2>Benutzer bearbeiten</h2>
@@ -29,6 +29,7 @@
 
     <script>
         let currentUserEmail = "";
+        let adminEmail = new URLSearchParams(window.location.search).get("email"); // Admin Email aus URL
 
         async function loadUsers() {
             try {
@@ -74,6 +75,13 @@
                 return;
             }
 
+            // Passwortvalidierung hinzufügen
+            if (newPassword.length < 8 || !/[A-Z]/.test(newPassword) || !/[a-z]/.test(newPassword) || 
+                !/\d/.test(newPassword) || !/[!@#$%^&*(),.?":{}|<>]/.test(newPassword)) {
+                alert("Passwort muss 8 Zeichen haben, Groß- und Kleinbuchstaben, eine Zahl und ein Sonderzeichen enthalten!");
+                return;
+            }
+
             try {
                 const response = await fetch(`/update-user/${currentUserEmail}`, {
                     method: "PUT",
@@ -97,7 +105,7 @@
             if (!confirm(`Möchtest du den Benutzer ${email} wirklich löschen?`)) return;
 
             try {
-                const response = await fetch(`/delete-user/${email}`, { method: "DELETE" });
+                const response = await fetch(`/delete-user/${email}?email=${adminEmail}`, { method: "DELETE" });
 
                 if (response.ok) {
                     alert("Benutzer erfolgreich gelöscht.");

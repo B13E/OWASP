@@ -7,7 +7,8 @@ mongoose.connect('mongodb://127.0.0.1:27017/mydatabase')
 
 const userSchema = new mongoose.Schema({
     email: { type: String, required: true, unique: true },
-    password: { type: String, required: true }
+    password: { type: String, required: true },
+    isAdmin: { type: Boolean, default: false }  // ➜ Neu: Admin-Flag (false = normaler User, true = Admin)
 });
 
 const User = mongoose.model('User', userSchema);
