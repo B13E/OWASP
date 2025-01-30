@@ -1,47 +1,67 @@
-const express = require('express');
-const fs = require('fs');
-const path = require('path');
-const mongoose = require('mongoose');
-const User = require('./database');
-const app = express();
+const express = require("express");
+const fs = require("fs");
+const path = require("path");
+const mongoose = require("mongoose");
+const cookieParser = require("cookie-parser");
+const helmet = require("helmet");
+const cors = require("cors");
+const rateLimit = require("express-rate-limit");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+const User = require("./database");
+require("dotenv").config();
 
+const app = express();
 app.use(express.json());
-app.use(express.static(path.join(__dirname, "../public"))); // Stellt HTML & JS bereit
+app.use(express.static(path.join(__dirname, "../public")));
+app.use(cookieParser());
+app.use(helmet()); // Security Headers
+app.use(cors({ origin: "http://localhost:3000", credentials: true })); // CORS mit Restriktionen
 
 console.log("📌 Express-Server wird gestartet...");
 logToFile("📌 Express-Server wird gestartet...");
 
-// Funktion zum Speichern von Logs in einer Datei mit verbessertem Zeitformat
+// ✅ Logging-Funktion für Sicherheitsvorfälle
 function logToFile(message) {
     const now = new Date();
-    const formattedTimestamp = `Date: ${now.toISOString().split("T")[0]} Time: ${now.toTimeString().split(" ")[0]}`;
-    const logMessage = `[${formattedTimestamp}] ${message}\n`;
-    fs.appendFileSync("logs.txt", logMessage, "utf8");
+    const formattedTimestamp = `[${now.toISOString()}]`;
+    fs.appendFileSync("logs.txt", `${formattedTimestamp} ${message}\n`, "utf8");
 }
 
-// Middleware zum Schutz des Dashboards
-async function checkAdmin(req, res, next) {
-    const email = req.query.email || req.body.email; 
+// ✅ Rate-Limiting für Login-Schutz (max. 5 Versuche pro 15 Min)
+const loginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 Minuten
+    max: 5,
+    message: "Zu viele Login-Versuche. Bitte warte 15 Minuten!",
+});
 
-    if (!email) {
-        return res.status(403).json({ error: "Kein Zugriff - Keine Admin-E-Mail übermittelt!" });
+// ✅ Middleware: JWT-Authentifizierung
+function authenticateToken(req, res, next) {
+    const token = req.cookies.token; // Token aus HTTP-Only Cookie
+
+    if (!token) {
+        return res.status(401).json({ error: "Kein Token, Zugriff verweigert!" });
     }
 
-    try {
-        const user = await User.findOne({ email });
-        if (!user || !user.isAdmin) {
-            console.error(`[PROTECT] Zugriff verweigert für ${email}`);
-            return res.status(403).json({ error: "Kein Zugriff - Kein Admin!" });
+    jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+        if (err) {
+            return res.status(403).json({ error: "Ungültiger Token, Zugriff verweigert!" });
         }
+        req.user = decoded;
         next();
-    } catch (err) {
-        console.error("[PROTECT] Fehler beim Prüfen des Admin-Status:", err);
-        res.status(500).json({ error: "Fehler beim Überprüfen der Berechtigung." });
-    }
+    });
 }
 
-// API: Neuen Benutzer speichern (Registrierung)
-app.post('/add-user', async (req, res) => {
+// ✅ Middleware: Admin-Prüfung
+function checkAdmin(req, res, next) {
+    if (!req.user || !req.user.isAdmin) {
+        return res.status(403).json({ error: "Kein Zugriff - Kein Admin!" });
+    }
+    next();
+}
+
+// ✅ Benutzerregistrierung (sicher mit bcrypt)
+app.post("/add-user", async (req, res) => {
     console.log("[POST] /add-user - Request empfangen:", req.body);
 
     const { email, password, isAdmin } = req.body;
@@ -53,23 +73,22 @@ app.post('/add-user', async (req, res) => {
     try {
         const existingUser = await User.findOne({ email });
         if (existingUser) {
-            return res.status(400).json({ error: "Diese E-Mail wird bereits verwendet." });
+            return res.status(400).json({ error: "Diese E-Mail wird bereits verwendet!" });
         }
 
-        console.log(`[POST] /add-user - Neuer Benutzer wird gespeichert (${email})...`);
-        const newUser = new User({ email, password, isAdmin: isAdmin || false });
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const newUser = new User({ email, password: hashedPassword, isAdmin: isAdmin || false });
         await newUser.save();
 
-        console.log("[POST] /add-user - Benutzer erfolgreich gespeichert!");
-        res.status(201).json({ message: "Gespeichert" });
+        res.status(201).json({ message: "Benutzer erfolgreich registriert!" });
     } catch (err) {
-        console.error("[POST] /add-user - Fehler beim Speichern:", err);
+        console.error("[POST] /add-user - Fehler:", err);
         res.status(500).json({ error: "Datenbankfehler, bitte erneut versuchen." });
     }
 });
 
-// API: Login-Prüfung
-app.post('/login', async (req, res) => {
+// ✅ Login mit JWT & bcrypt
+app.post("/login", loginLimiter, async (req, res) => {
     console.log("[POST] /login - Login-Anfrage erhalten:", req.body);
 
     const { email, password } = req.body;
@@ -81,59 +100,78 @@ app.post('/login', async (req, res) => {
     try {
         const user = await User.findOne({ email });
 
-        if (!user || user.password !== password) {
+        if (!user) {
+            console.error(`[POST] /login - Fehler: Benutzer nicht gefunden für E-Mail: ${email}`);
+            return res.status(401).json({ error: "Ungültige E-Mail oder Passwort." });
+        }
+
+        console.log(`[POST] /login - Gefundener Benutzer:`, user);
+
+        const isMatch = await bcrypt.compare(password, user.password);
+
+        if (!isMatch) {
+            console.error(`[POST] /login - Fehler: Passwort stimmt nicht überein.`);
             return res.status(401).json({ error: "Ungültige E-Mail oder Passwort." });
         }
 
         console.log(`[POST] /login - Erfolgreich angemeldet: ${email}`);
 
-        if (user.isAdmin) {
-            return res.status(200).json({ message: "Login erfolgreich!", redirect: `/dashboard.html?email=${email}` });
-        }
+        const token = jwt.sign({ email: user.email, isAdmin: user.isAdmin }, process.env.JWT_SECRET, {
+            expiresIn: "15m",
+        });
 
-        return res.status(200).json({ message: "Login erfolgreich!", redirect: `/userlist.html?email=${email}` });
+        res.cookie("token", token, { httpOnly: true, secure: true, sameSite: "Strict" });
+        res.status(200).json({ message: "Login erfolgreich!", redirect: user.isAdmin ? "/dashboard.html" : "/userlist.html" });
 
     } catch (err) {
-        console.error("[POST] /login - Fehler:", err);
+        console.error("[POST] /login - Serverfehler:", err);
         res.status(500).json({ error: "Serverfehler, bitte erneut versuchen." });
     }
 });
 
-// API: Zugriff auf Dashboard (nur für Admins)
-app.get('/dashboard', checkAdmin, (req, res) => {
-    res.sendFile(path.join(__dirname, "../public/dashboard.html"));
+// ✅ Logout (Cookie entfernen)
+app.post("/logout", (req, res) => {
+    res.clearCookie("token");
+    res.json({ message: "Erfolgreich ausgeloggt!" });
 });
 
-// API: Alle Benutzer abrufen (Admin & User)
-app.get('/users', async (req, res) => {
+// ✅ Benutzerliste abrufen (Token-geschützt)
+app.get("/users", authenticateToken, async (req, res) => {
     console.log("[GET] /users - Abruf der Benutzerdaten...");
     try {
         const users = await User.find({}, { password: 0 });
-        console.log(`[GET] /users - Anzahl Benutzer: ${users.length}`);
         res.json(users);
     } catch (err) {
-        console.error("[GET] /users - Fehler beim Abruf:", err);
+        console.error("[GET] /users - Fehler:", err);
         res.status(500).json({ error: "Fehler beim Abrufen der Daten." });
     }
 });
 
-// API: Benutzer aktualisieren (Passwort ändern)
-app.put('/update-user/:email', async (req, res) => {
+app.put('/update-user/:email', authenticateToken, async (req, res) => {
     const email = req.params.email;
     const { password } = req.body;
 
     console.log(`[PUT] /update-user - Benutzer aktualisieren: ${email}`);
 
     if (!password) {
+        console.error("[PUT] /update-user - Fehler: Neues Passwort fehlt.");
         return res.status(400).json({ error: "Neues Passwort darf nicht leer sein." });
     }
 
     try {
-        const updatedUser = await User.findOneAndUpdate({ email }, { password }, { new: true });
-
-        if (!updatedUser) {
+        // 🔹 Prüfen, ob Benutzer existiert
+        const user = await User.findOne({ email });
+        if (!user) {
+            console.error(`[PUT] /update-user - Fehler: Benutzer nicht gefunden (${email})`);
             return res.status(404).json({ error: "Benutzer nicht gefunden." });
         }
+
+        // 🔹 Passwort hashen
+        const hashedPassword = await bcrypt.hash(password, 10);
+        
+        // 🔹 Passwort in der DB aktualisieren
+        user.password = hashedPassword;
+        await user.save();
 
         console.log(`[PUT] /update-user - Benutzer erfolgreich aktualisiert (${email})`);
         res.json({ message: "Benutzer erfolgreich aktualisiert." });
@@ -143,16 +181,11 @@ app.put('/update-user/:email', async (req, res) => {
     }
 });
 
-// API: Benutzer löschen (nur Admins)
-app.delete('/delete-user/:email', checkAdmin, async (req, res) => {
+
+// ✅ Benutzer löschen (nur Admin)
+app.delete("/delete-user/:email", authenticateToken, checkAdmin, async (req, res) => {
     const emailToDelete = req.params.email;
-    const adminEmail = req.query.email || req.body.email;
-
-    console.log(`[DELETE] /delete-user - Admin ${adminEmail} löscht Benutzer: ${emailToDelete}`);
-
-    if (emailToDelete === adminEmail) {
-        return res.status(403).json({ error: "Ein Admin kann sich nicht selbst löschen!" });
-    }
+    console.log(`[DELETE] /delete-user - Admin löscht Benutzer: ${emailToDelete}`);
 
     try {
         const deletedUser = await User.findOneAndDelete({ email: emailToDelete });
@@ -161,14 +194,13 @@ app.delete('/delete-user/:email', checkAdmin, async (req, res) => {
             return res.status(404).json({ error: "Benutzer nicht gefunden." });
         }
 
-        console.log(`[DELETE] /delete-user - Benutzer erfolgreich gelöscht (${emailToDelete})`);
         res.json({ message: "Benutzer erfolgreich gelöscht." });
     } catch (err) {
-        console.error("[DELETE] /delete-user - Fehler beim Löschen:", err);
+        console.error("[DELETE] /delete-user - Fehler:", err);
         res.status(500).json({ error: "Fehler beim Löschen des Benutzers." });
     }
 });
 
-// Server starten
+// ✅ Server starten
 const PORT = 3000;
 app.listen(PORT, () => console.log(`🚀 Server läuft auf http://localhost:${PORT}`));
