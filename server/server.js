@@ -9,6 +9,7 @@ const rateLimit = require("express-rate-limit");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("./database");
+
 require("dotenv").config();
 
 const app = express();
@@ -35,9 +36,9 @@ const loginLimiter = rateLimit({
     message: "Zu viele Login-Versuche. Bitte warte 15 Minuten!",
 });
 
-// ✅ Middleware: JWT-Authentifizierung
+// ✅ Middleware: JWT-Authentifizierung (verbesserte Version)
 function authenticateToken(req, res, next) {
-    const token = req.cookies.token; // Token aus HTTP-Only Cookie
+    const token = req.cookies.token || req.headers["authorization"]?.split(" ")[1];
 
     if (!token) {
         return res.status(401).json({ error: "Kein Token, Zugriff verweigert!" });
@@ -52,9 +53,12 @@ function authenticateToken(req, res, next) {
     });
 }
 
-// ✅ Middleware: Admin-Prüfung
+// ✅ Middleware: Admin-Prüfung mit Fehlerhandling
 function checkAdmin(req, res, next) {
-    if (!req.user || !req.user.isAdmin) {
+    if (!req.user) {
+        return res.status(401).json({ error: "Nicht authentifiziert!" });
+    }
+    if (!req.user.isAdmin) {
         return res.status(403).json({ error: "Kein Zugriff - Kein Admin!" });
     }
     next();
@@ -147,33 +151,26 @@ app.get("/users", authenticateToken, async (req, res) => {
     }
 });
 
-app.put('/update-user/:email', authenticateToken, async (req, res) => {
+// ✅ Benutzer aktualisieren
+app.put("/update-user/:email", authenticateToken, async (req, res) => {
     const email = req.params.email;
     const { password } = req.body;
 
     console.log(`[PUT] /update-user - Benutzer aktualisieren: ${email}`);
 
     if (!password) {
-        console.error("[PUT] /update-user - Fehler: Neues Passwort fehlt.");
         return res.status(400).json({ error: "Neues Passwort darf nicht leer sein." });
     }
 
     try {
-        // 🔹 Prüfen, ob Benutzer existiert
         const user = await User.findOne({ email });
         if (!user) {
-            console.error(`[PUT] /update-user - Fehler: Benutzer nicht gefunden (${email})`);
             return res.status(404).json({ error: "Benutzer nicht gefunden." });
         }
 
-        // 🔹 Passwort hashen
-        const hashedPassword = await bcrypt.hash(password, 10);
-        
-        // 🔹 Passwort in der DB aktualisieren
-        user.password = hashedPassword;
+        user.password = await bcrypt.hash(password, 10);
         await user.save();
 
-        console.log(`[PUT] /update-user - Benutzer erfolgreich aktualisiert (${email})`);
         res.json({ message: "Benutzer erfolgreich aktualisiert." });
     } catch (err) {
         console.error("[PUT] /update-user - Fehler beim Aktualisieren:", err);
@@ -181,12 +178,9 @@ app.put('/update-user/:email', authenticateToken, async (req, res) => {
     }
 });
 
-
 // ✅ Benutzer löschen (nur Admin)
 app.delete("/delete-user/:email", authenticateToken, checkAdmin, async (req, res) => {
     const emailToDelete = req.params.email;
-    console.log(`[DELETE] /delete-user - Admin löscht Benutzer: ${emailToDelete}`);
-
     try {
         const deletedUser = await User.findOneAndDelete({ email: emailToDelete });
 
@@ -196,11 +190,19 @@ app.delete("/delete-user/:email", authenticateToken, checkAdmin, async (req, res
 
         res.json({ message: "Benutzer erfolgreich gelöscht." });
     } catch (err) {
-        console.error("[DELETE] /delete-user - Fehler:", err);
         res.status(500).json({ error: "Fehler beim Löschen des Benutzers." });
     }
 });
 
+// ✅ Dashboard-Seite abrufen (nur für Admins)
+app.get("/dashboard", authenticateToken, checkAdmin, (req, res) => {
+    res.status(200).json({ message: "Willkommen auf dem Admin-Dashboard!" });
+});
+
 // ✅ Server starten
-const PORT = 3000;
-app.listen(PORT, () => console.log(`🚀 Server läuft auf http://localhost:${PORT}`));
+if (process.env.NODE_ENV !== "test") {
+    const PORT = 3000;
+    app.listen(PORT, () => console.log(`🚀 Server läuft auf http://localhost:${PORT}`));
+} else {
+    module.exports = app;
+}
