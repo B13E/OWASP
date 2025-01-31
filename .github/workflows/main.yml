@@ -5,6 +5,8 @@ on: [push, pull_request]
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      JWT_SECRET: ${{ secrets.JWT_SECRET }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -23,9 +25,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-
 
-      - name: Set ENV variables
-        run: echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> $GITHUB_ENV
-
       - name: Debug JWT_SECRET
         run: |
           if [ -z "$JWT_SECRET" ]; then
@@ -33,9 +32,6 @@ jobs:
             exit 1
           else
             echo "✅ JWT_SECRET ist erfolgreich gesetzt!"
-          fi
-        env:
-          JWT_SECRET: ${{ secrets.JWT_SECRET }}
 
       - name: Install Node.js
         uses: actions/setup-node@v3
