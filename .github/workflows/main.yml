@@ -26,6 +26,17 @@ jobs:
       - name: Set ENV variables
         run: echo "JWT_SECRET=${{ secrets.JWT_SECRET }}" >> $GITHUB_ENV
 
+      - name: Debug JWT_SECRET
+        run: |
+          if [ -z "$JWT_SECRET" ]; then
+            echo "❌ JWT_SECRET ist NICHT gesetzt!"
+            exit 1
+          else
+            echo "✅ JWT_SECRET ist erfolgreich gesetzt!"
+          fi
+        env:
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+
       - name: Install Node.js
         uses: actions/setup-node@v3
         with:
@@ -33,17 +44,6 @@ jobs:
 
       - name: Install dependencies
         run: npm install
-
-      - name: Debug JWT_SECRET
-        run: |
-          if [ -z "$JWT_SECRET" ]; then
-            echo "❌ JWT_SECRET ist nicht gesetzt!"
-            exit 1
-          else
-            echo "✅ JWT_SECRET ist erfolgreich gesetzt!"
-          fi
-        env:
-          JWT_SECRET: ${{ secrets.JWT_SECRET }}
 
       - name: Run Tests
         run: npm test
