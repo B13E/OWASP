@@ -6,7 +6,6 @@
     "start": "node server/server.js",
     "dev": "nodemon server/server.js",
     "test": "jest --detectOpenHandles --forceExit",
-    "jest": "jest --detectOpenHandles --forceExit",
     "prepare": "husky install"
   },
   "keywords": [],
