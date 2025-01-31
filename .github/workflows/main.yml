@@ -1,0 +1,50 @@
+name: Run Tests on Push
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      JWT_SECRET: ${{ secrets.JWT_SECRET }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Debugging - Zeige Verzeichnisinhalt
+        run: ls -R
+
+      - name: Debugging - Überprüfe package.json
+        run: cat package.json
+
+      - name: Cache dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Debug JWT_SECRET
+        run: |
+          if [ -z "$JWT_SECRET" ]; then
+            echo "❌ JWT_SECRET ist NICHT gesetzt!"
+            exit 1
+          else
+            echo "✅ JWT_SECRET ist erfolgreich gesetzt!"
+        env:
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+
+      - name: Install Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run Tests
+        run: npm test
+        env:
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
