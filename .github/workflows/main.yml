@@ -7,6 +7,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       JWT_SECRET: ${{ secrets.JWT_SECRET }}
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -32,6 +33,8 @@ jobs:
             exit 1
           else
             echo "✅ JWT_SECRET ist erfolgreich gesetzt!"
+        env:
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
 
       - name: Install Node.js
         uses: actions/setup-node@v3
